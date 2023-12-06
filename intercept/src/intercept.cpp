@@ -12,6 +12,7 @@
 #include <stdarg.h>
 #include <sstream>
 #include <time.h>       // strdate
+#include <cstdlib>
 
 #include "common.h"
 #include "emulate.h"
@@ -5620,6 +5621,16 @@ void CLIntercept::addTimingEvent(
 void CLIntercept::checkTimingEvents()
 {
     std::lock_guard<std::mutex> lock(m_Mutex);
+    static int iter = -1;
+    static int omit_cnt = -1;
+    if (omit_cnt == -1) {
+        omit_cnt = 0;
+        char *val = getenv("OMIT_COUNT");
+        if (val != NULL) {
+            omit_cnt = atoi(val);
+            printf("omit_cnt: %d\n", omit_cnt);
+        }
+    }
 
     CEventList::iterator    current = m_EventList.begin();
     CEventList::iterator    next;
@@ -5631,6 +5642,18 @@ void CLIntercept::checkTimingEvents()
 
         next = current;
         ++next;
+
+            iter++;
+            if (iter >= omit_cnt) {
+                if (iter == omit_cnt)
+                    printf("mingyuki: Now start to collect..");
+            } else {
+                if (iter % 10 == 0)
+                    printf("Do not collect event on iter %d\n", iter);
+                m_EventList.erase( current );
+                current = next;
+                continue;
+            }
 
         const SEventListNode& node = *current;
 
